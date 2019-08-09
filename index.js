@@ -17,6 +17,13 @@ const Message = db.define(
     user: Sequelize.STRING
   }
 )
+const Channel = db.define(
+  'channel',{name: Sequelize.STRING}
+)
+
+Message.belongsTo(Channel)
+Channel.hasMany(Message)
+
 const sse = new Sse()
 
 const app = express()
@@ -26,20 +33,32 @@ const jsonParser = bodyParser.json()
 app.use(jsonParser)
 
 app.get('/stream',async (req, res)=>{
-  const messages = await Message.findAll()
-  const data = JSON.stringify(messages)
+  const channels = await Channel.findAll({include: [Message]})
+  const data = JSON.stringify(channels)
   sse.updateInit(data)
   sse.init(req, res)
 } )
 
 app.post('/message', async (req, res) => {
-  const { message, user } = req.body
-  const entity = await Message.create({ text: message, user })
-  const messages = await Message.findAll()
-  const data = JSON.stringify(messages)
+  const { message, user, channelId} = req.body
+  //const channelId = request.body.channelId || 1
+  const entity = await Message.create({ text: message, user, channelId })
+  const channels = await Channel.findAll({include: [Message]})
+  const data = JSON.stringify(channels)
   sse.updateInit(data)
   sse.send(data)
   res.send(entity)
+})
+
+app.post('/channels', async(req, res)=>{
+  const channel = await Channel.create(req.body)
+  const channels = await Channel.findAll({
+    include: [Message]
+  })
+  const data = JSON.stringify(channels)
+  sse.updateInit(data)
+  sse.send(data)
+  res.send(channel)
 })
 
 const port = process.env.PORT || 5000
