@@ -13,7 +13,8 @@ db
 const Message = db.define(
   'message',
   {
-    text: Sequelize.STRING
+    text: Sequelize.STRING,
+    user: Sequelize.STRING
   }
 )
 const sse = new Sse()
@@ -32,8 +33,8 @@ app.get('/stream',async (req, res)=>{
 } )
 
 app.post('/message', async (req, res) => {
-  const { message } = req.body
-  const entity = await Message.create({ text: message })
+  const { message, user } = req.body
+  const entity = await Message.create({ text: message, user })
   const messages = await Message.findAll()
   const data = JSON.stringify(messages)
   sse.updateInit(data)
